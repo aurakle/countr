@@ -8,6 +8,7 @@ use db::get_pool;
 use env_logger::Target;
 use eyre::Context as _;
 use eyre::Result;
+use log::warn;
 use log::{LevelFilter, error, info};
 use serde::{Deserialize, Serialize};
 use sqlx::FromRow;
@@ -73,42 +74,13 @@ async fn update(_req: HttpRequest, id: Path<String>) -> impl Responder {
         return HttpResponse::BadRequest().finish();
     }
 
-    let entry = match increment_or_create(id).await {
+    let entry = match db::update(get_pool().await, id).await {
         Ok(val) => val,
-        Err(_) => return HttpResponse::InternalServerError().finish(),
+        Err(e) => {
+            warn!("{:?}", e);
+            return HttpResponse::InternalServerError().finish();
+        },
     };
 
     HttpResponse::Ok().json(entry)
-}
-
-async fn increment_or_create(id: String) -> Result<Entry> {
-    let mut trans = get_pool().await.begin().await?;
-
-    let entry = match db::get(&mut *trans, id.clone()).await {
-        Ok(val) => val,
-        Err(_) => {
-            let entry = Entry {
-                id: id.clone(),
-                count: 0,
-                modified_at: Utc::now(),
-            };
-
-            db::create(&mut *trans, entry.clone()).await?;
-
-            entry
-        }
-    };
-
-    let entry = Entry {
-        id: id.clone(),
-        count: entry.count + 1,
-        modified_at: Utc::now(),
-    };
-
-    db::delete(&mut *trans, id).await?;
-    db::create(&mut *trans, entry.clone()).await?;
-
-    trans.commit().await?;
-
-    Ok(entry)
 }

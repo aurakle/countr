@@ -1,6 +1,7 @@
 use std::sync::OnceLock;
 
 use chrono::DateTime;
+use chrono::Utc;
 use eyre::Context as _;
 use eyre::Result;
 use serde::{Deserialize, Serialize};
@@ -32,7 +33,7 @@ pub(crate) async fn init_db() -> Result<()> {
 CREATE TABLE IF NOT EXISTS entries (
         id VARCHAR(64) PRIMARY KEY,
         count BIGINT NOT NULL,
-        modified_at TIMESTAMP NOT NULL
+        modified_at TIMESTAMPTZ NOT NULL
 )
 ",
     )
@@ -61,38 +62,22 @@ WHERE id = $1
     .context("Entry does not exist")
 }
 
-pub(crate) async fn create(
-    executor: impl Executor<'_, Database = Postgres>,
-    entry: Entry,
-) -> Result<()> {
-    sqlx::query(
-        "
-INSERT INTO entries (id, count, modified_at)
-VALUES ($1, $2, $3)
-",
-    )
-    .bind(entry.id)
-    .bind(entry.count)
-    .bind(entry.modified_at)
-    .execute(executor)
-    .await?;
-
-    Ok(())
-}
-
-pub(crate) async fn delete(
+pub(crate) async fn update(
     executor: impl Executor<'_, Database = Postgres>,
     id: String,
-) -> Result<()> {
-    sqlx::query(
+) -> Result<Entry> {
+    sqlx::query_as::<Postgres, Entry>(
         "
-DELETE FROM entries
-WHERE id = $1
+INSERT INTO entries (id, count, modified_at)
+VALUES ($1, 1, $2)
+ON CONFLICT (id)
+DO UPDATE SET count = entries.count + 1, modified_at = $2
+RETURNING *;
 ",
     )
     .bind(id)
-    .execute(executor)
-    .await?;
-
-    Ok(())
+    .bind(Utc::now())
+    .fetch_one(executor)
+    .await
+    .context("Failed to update entry")
 }
