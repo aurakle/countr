@@ -42,6 +42,12 @@ in {
       description = "Group under which the service runs.";
     };
 
+    database = mkOption {
+      type = str;
+      default = "postgresql://${cfg.user}@/countr?host=/run/postgresql";
+      description = "Postgres database URL.";
+    };
+
     port = mkOption {
       type = number;
       default = 60887;
@@ -60,7 +66,7 @@ in {
       ];
       environment = {
         DATA_PATH = dataPath;
-        POSTGRES_DB = "postgres://${cfg.user}@/countr";
+        POSTGRES_DB = cfg.database;
         PORT = toString cfg.port;
       };
 
