@@ -11,7 +11,8 @@
       in {
         devShells.default = import ./shell.nix { inherit pkgs; };
         packages.default = pkgs.callPackage ./package.nix { };
-        nixosModules.default = import ./module.nix self.packages;
       }
-    );
+    ) // {
+      nixosModules.default = import ./module.nix self.packages;
+    };
 }
