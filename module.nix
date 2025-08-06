@@ -44,7 +44,7 @@ in {
 
     database = mkOption {
       type = str;
-      default = "postgresql://${cfg.user}@/countr?host=/run/postgresql";
+      default = "postgresql://${cfg.user}@localhost/countr?host=/run/postgresql";
       description = "Postgres database URL.";
     };
 
