@@ -11,4 +11,4 @@ eyre = "0.6.12"
 log = "0.4.27"
 serde = { version = "1.0.219", features = ["derive"] }
 serde-env = "0.2.0"
-sqlx = { version = "0.8.6", features = ["postgres"] }
+sqlx = { version = "0.8.6", features = ["chrono", "postgres", "runtime-tokio"] }

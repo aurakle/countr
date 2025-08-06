@@ -2,10 +2,11 @@ use std::sync::OnceLock;
 
 use chrono::DateTime;
 use eyre::Context as _;
+use eyre::Result;
 use serde::{Deserialize, Serialize};
-use sqlx::{postgres::PgPoolOptions, Executor, FromRow, Pool, Postgres};
+use sqlx::{Executor, FromRow, Pool, Postgres, postgres::PgPoolOptions};
 
-use crate::{config::get_config, Entry};
+use crate::{Entry, config::get_config};
 
 pub(crate) type Db = Pool<Postgres>;
 
@@ -31,12 +32,12 @@ pub(crate) async fn init_db() -> Result<()> {
 CREATE TABLE IF NOT EXISTS entries (
         id VARCHAR(64) PRIMARY KEY,
         count BIGINT NOT NULL,
-        modified_at TIMESTAMP WITH TIME ZONE NOT NULL
+        modified_at TIMESTAMP NOT NULL
 )
-        ",
+",
     )
-        .execute(&mut *trans)
-        .await?;
+    .execute(&mut *trans)
+    .await?;
 
     trans
         .commit()
@@ -44,14 +45,54 @@ CREATE TABLE IF NOT EXISTS entries (
         .context("Failed to initialize database")
 }
 
-pub(crate) async fn get(executor: impl Executor<'_, Database = Postgres>, id: String) -> Result<Entry> {
-    todo!()
+pub(crate) async fn get(
+    executor: impl Executor<'_, Database = Postgres>,
+    id: String,
+) -> Result<Entry> {
+    sqlx::query_as::<Postgres, Entry>(
+        "
+SELECT * FROM entries
+WHERE id = $1
+",
+    )
+    .bind(id)
+    .fetch_one(executor)
+    .await
+    .context("Entry does not exist")
 }
 
-pub(crate) async fn create(executor: impl Executor<'_, Database = Postgres>, entry: Entry) -> Result<()> {
-    todo!()
+pub(crate) async fn create(
+    executor: impl Executor<'_, Database = Postgres>,
+    entry: Entry,
+) -> Result<()> {
+    sqlx::query(
+        "
+INSERT INTO entries (id, count, modified_at)
+VALUES ($1, $2, $3)
+",
+    )
+    .bind(entry.id)
+    .bind(entry.count)
+    .bind(entry.modified_at)
+    .execute(executor)
+    .await?;
+
+    Ok(())
 }
 
-pub(crate) async fn delete(executor: impl Executor<'_, Database = Postgres>, id: String) -> Result<()> {
-    todo!()
+pub(crate) async fn delete(
+    executor: impl Executor<'_, Database = Postgres>,
+    id: String,
+) -> Result<()> {
+    sqlx::query(
+        "
+DELETE FROM entries
+WHERE id = $1
+",
+    )
+    .bind(id)
+    .execute(executor)
+    .await?;
+
+    Ok(())
 }

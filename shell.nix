@@ -18,4 +18,5 @@ in pkgs.mkShell {
   RUST_SRC_PATH = "${pkgs.rust.packages.stable.rustPlatform.rustLibSrc}";
   RUST_BACKTRACE = 1;
   LD_LIBRARY_PATH = pkgs.lib.makeLibraryPath libs;
+  POSTGRES_DB = "postgres://countr:CHANGEMEPLEASE@localhost/test";
 }
