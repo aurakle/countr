@@ -60,6 +60,7 @@ in {
       ];
       environment = {
         DATA_PATH = dataPath;
+        POSTGRES_DB = "postgres://${cfg.user}@/countr";
         PORT = toString cfg.port;
       };
 
